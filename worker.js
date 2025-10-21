@@ -26,7 +26,7 @@ export default {
         }
 
         if (path === '/debates/random' && request.method === 'GET') {
-            return getRandomDebate(env, corsHeaders);
+            return getRandomDebate(request, env, corsHeaders);
         }
 
         if (path === '/debates' && request.method === 'POST') {
@@ -148,10 +148,24 @@ async function updateTheme(request, env, corsHeaders) {
     return Response.json({ success: true }, { headers: corsHeaders });
 }
 
-async function getRandomDebate(env, corsHeaders) {
-    const debates = await env.DB.prepare(
-        'SELECT * FROM debates WHERE status = ? AND response_count < max_responses ORDER BY RANDOM() LIMIT 1'
-    ).bind('active').all();
+async function getRandomDebate(request, env, corsHeaders) {
+    const url = new URL(request.url);
+    const excludeParam = url.searchParams.get('exclude');
+    const excludeIds = excludeParam ? excludeParam.split(',').map(id => parseInt(id)) : [];
+
+    let query = 'SELECT * FROM debates WHERE status = ? AND response_count < max_responses';
+    let params = ['active'];
+
+    if (excludeIds.length > 0) {
+        const placeholders = excludeIds.map(() => '?').join(',');
+        query += ` AND id NOT IN (${placeholders})`;
+        params.push(...excludeIds);
+    }
+
+    query += ' ORDER BY RANDOM() LIMIT 1';
+
+    const stmt = env.DB.prepare(query);
+    const debates = await stmt.bind(...params).all();
 
     if (debates.results.length === 0) {
         return Response.json({ error: 'No active battles' }, { status: 404, headers: corsHeaders });

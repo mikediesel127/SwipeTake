@@ -6,6 +6,7 @@ let sessionToken = null;
 let timer = null;
 let timerInterval = null;
 let currentSide = null;
+let viewedDebateIds = [];
 
 const authScreen = document.getElementById('auth-screen');
 const app = document.getElementById('app');
@@ -223,6 +224,7 @@ function logout() {
     localStorage.removeItem('swipetake_session');
     sessionToken = null;
     currentUser = null;
+    viewedDebateIds = [];
     app.classList.add('hidden');
     authScreen.classList.remove('hidden');
     usernameInput.value = '';
@@ -243,7 +245,10 @@ function switchView(view) {
     
     if (view === 'leaderboard') loadLeaderboard();
     if (view === 'profile') updateProfile();
-    if (view === 'feed') loadDebate();
+    if (view === 'feed') {
+        viewedDebateIds = [];
+        loadDebate();
+    }
 }
 
 async function loadDebate() {
@@ -251,8 +256,22 @@ async function loadDebate() {
     
     setTimeout(async () => {
         try {
-            const res = await fetch(`${API_URL}/debates/random`);
-            currentDebate = await res.json();
+            const excludeIds = viewedDebateIds.join(',');
+            const url = excludeIds ? `${API_URL}/debates/random?exclude=${excludeIds}` : `${API_URL}/debates/random`;
+            const res = await fetch(url);
+            
+            if (!res.ok) {
+                viewedDebateIds = [];
+                const retryRes = await fetch(`${API_URL}/debates/random`);
+                currentDebate = await retryRes.json();
+            } else {
+                currentDebate = await res.json();
+            }
+            
+            viewedDebateIds.push(currentDebate.id);
+            if (viewedDebateIds.length > 20) {
+                viewedDebateIds.shift();
+            }
             
             promptText.textContent = currentDebate.prompt;
             vibeTag.textContent = `#${currentDebate.vibe.toUpperCase()}`;
@@ -274,15 +293,27 @@ async function loadDebate() {
             animateCardIn();
         } catch (err) {
             console.error('Error:', err);
+            const fallbackDebates = [
+                "Trump was the best president in modern US history",
+                "Woke culture is destroying Western civilization",
+                "AI will make 90% of humans obsolete by 2035",
+                "The 9-5 is modern slavery designed to keep you poor",
+                "Marriage is a scam created to benefit women"
+            ];
+            const randomPrompt = fallbackDebates[Math.floor(Math.random() * fallbackDebates.length)];
+            
             currentDebate = {
-                id: Math.floor(Math.random() * 1000),
-                prompt: "Trump was the best president in modern US history",
+                id: Math.floor(Math.random() * 10000),
+                prompt: randomPrompt,
                 vibe: "Spicy",
-                response_count: 3,
+                response_count: Math.floor(Math.random() * 5),
                 max_responses: 10,
                 status: 'active',
                 ends_at: new Date(Date.now() + 10 * 60 * 1000).toISOString()
             };
+            
+            viewedDebateIds.push(currentDebate.id);
+            
             promptText.textContent = currentDebate.prompt;
             vibeTag.textContent = `#${currentDebate.vibe.toUpperCase()}`;
             slots.textContent = `${currentDebate.response_count}/${currentDebate.max_responses} FIGHTERS`;
@@ -410,7 +441,7 @@ async function submitArgument() {
             updateStats();
             closeArgueModal();
             showWinner('ARGUMENT POSTED! ⚔️', '+5 XP');
-            setTimeout(() => skipDebate(), 2000);
+            setTimeout(() => skipDebate(), 1500);
         }
     } catch (err) {
         console.error('Error:', err);
@@ -418,7 +449,7 @@ async function submitArgument() {
         updateStats();
         closeArgueModal();
         showWinner('ARGUMENT POSTED! ⚔️', '+5 XP');
-        setTimeout(() => skipDebate(), 2000);
+        setTimeout(() => skipDebate(), 1500);
     }
 }
 
