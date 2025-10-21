@@ -6,7 +6,7 @@
     <title>SwipeTake - Battle Arena</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="theme-dark">
     <div id="auth-screen" class="auth-screen">
         <div class="auth-container">
             <div class="logo">⚔️</div>
@@ -151,6 +151,20 @@
                     </div>
                 </div>
 
+                <div class="theme-selector">
+                    <h3>THEME</h3>
+                    <div class="theme-options">
+                        <button class="theme-btn active" data-theme="dark">
+                            <span class="theme-preview dark-preview"></span>
+                            <span>DARK</span>
+                        </button>
+                        <button class="theme-btn" data-theme="light">
+                            <span class="theme-preview light-preview"></span>
+                            <span>LIGHT</span>
+                        </button>
+                    </div>
+                </div>
+
                 <div class="badges-section">
                     <h3>ACHIEVEMENTS</h3>
                     <div class="badges-grid">
@@ -195,7 +209,7 @@
             <button class="nav-btn active" data-view="feed">⚔️ BATTLES</button>
             <button class="nav-btn" data-view="create">➕ START</button>
             <button class="nav-btn" data-view="leaderboard">🏆 TOP 10</button>
-            <button class="nav-btn" data-view="profile">👤 STATS</button>
+            <button class="nav-btn" data-view="profile">👤 ME</button>
         </nav>
     </div>
 

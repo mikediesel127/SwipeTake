@@ -60,6 +60,7 @@ init();
 
 function init() {
     checkSession();
+    loadTheme();
     
     btnLogin.addEventListener('click', login);
     usernameInput.addEventListener('keypress', (e) => {
@@ -91,6 +92,51 @@ function init() {
             switchView(view);
         });
     });
+    
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const theme = e.currentTarget.dataset.theme;
+            setTheme(theme);
+        });
+    });
+}
+
+function loadTheme() {
+    const savedTheme = localStorage.getItem('swipetake_theme') || 'dark';
+    setTheme(savedTheme, false);
+}
+
+function setTheme(theme, save = true) {
+    document.body.className = `theme-${theme}`;
+    
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.theme === theme) {
+            btn.classList.add('active');
+        }
+    });
+    
+    if (save) {
+        localStorage.setItem('swipetake_theme', theme);
+        if (currentUser) {
+            updateUserTheme(theme);
+        }
+    }
+}
+
+async function updateUserTheme(theme) {
+    try {
+        await fetch(`${API_URL}/user/theme`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${sessionToken}`
+            },
+            body: JSON.stringify({ theme })
+        });
+    } catch (err) {
+        console.error('Failed to save theme:', err);
+    }
 }
 
 function checkSession() {
@@ -111,6 +157,9 @@ async function verifySession() {
         if (res.ok) {
             const data = await res.json();
             currentUser = data.user;
+            if (currentUser.theme) {
+                setTheme(currentUser.theme, false);
+            }
             showApp();
         } else {
             localStorage.removeItem('swipetake_session');
@@ -147,6 +196,9 @@ async function login() {
             currentUser = data.user;
             sessionToken = data.session_token;
             localStorage.setItem('swipetake_session', sessionToken);
+            if (currentUser.theme) {
+                setTheme(currentUser.theme, false);
+            }
             showApp();
         } else {
             alert(data.error || 'LOGIN FAILED');
@@ -160,7 +212,8 @@ async function login() {
             level: 1,
             wins: 0,
             losses: 0,
-            streak: 0
+            streak: 0,
+            theme: 'dark'
         };
         showApp();
     }
@@ -223,8 +276,8 @@ async function loadDebate() {
             console.error('Error:', err);
             currentDebate = {
                 id: Math.floor(Math.random() * 1000),
-                prompt: "Remote work kills creativity and innovation",
-                vibe: "Deep",
+                prompt: "Trump was the best president in modern US history",
+                vibe: "Spicy",
                 response_count: 3,
                 max_responses: 10,
                 status: 'active',
@@ -299,7 +352,7 @@ function openArgueModal(side) {
     
     currentSide = side;
     modalSide.textContent = side === 'for' ? 'FIGHTING FOR' : 'FIGHTING AGAINST';
-    modalSide.style.color = side === 'for' ? '#00ffff' : '#ff006e';
+    modalSide.style.color = side === 'for' ? 'var(--accent-cyan)' : 'var(--accent-pink)';
     modalPrompt.textContent = currentDebate.prompt;
     argueModal.classList.remove('hidden');
     argumentInput.value = '';
