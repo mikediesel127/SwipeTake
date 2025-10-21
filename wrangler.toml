@@ -1,0 +1,8 @@
+name = "swipetake-api"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "swipetake-db"
+database_id = "7a999088-d0ed-4ab1-b0bc-6f863b3ea8cd"

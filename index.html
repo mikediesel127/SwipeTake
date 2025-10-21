@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwipeTake - Argue. Win. Level Up.</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header>
+            <h1>🔥 SwipeTake</h1>
+            <div class="stats">
+                <span id="level">Level 1</span>
+                <span id="xp">0 XP</span>
+            </div>
+        </header>
+
+        <!-- Main Feed -->
+        <div id="feed" class="feed">
+            <div class="card" id="debate-card">
+                <div class="prompt-container">
+                    <span class="vibe-tag" id="vibe-tag">#Fun</span>
+                    <h2 id="prompt-text">Loading debates...</h2>
+                    <p class="slots" id="slots">0/10 responses</p>
+                </div>
+                
+                <div class="actions">
+                    <button class="btn-primary" id="btn-argue">Argue This 🗣️</button>
+                    <button class="btn-secondary" id="btn-skip">Skip →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Argue Modal -->
+        <div id="argue-modal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Make Your Case</h3>
+                <p id="modal-prompt"></p>
+                <select id="side-select">
+                    <option value="for">For</option>
+                    <option value="against">Against</option>
+                </select>
+                <textarea id="argument-input" placeholder="Your argument (max 200 chars)..." maxlength="200"></textarea>
+                <div class="timer" id="timer">30s</div>
+                <div class="modal-actions">
+                    <button id="btn-submit">Submit 🚀</button>
+                    <button id="btn-cancel">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vote Modal -->
+        <div id="vote-modal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Vote on Arguments</h3>
+                <div id="vote-list"></div>
+                <button id="btn-done-voting">Done Voting</button>
+            </div>
+        </div>
+
+        <!-- Bottom Nav -->
+        <nav>
+            <button class="nav-btn active" data-view="feed">🔥 Feed</button>
+            <button class="nav-btn" data-view="create">➕ Create</button>
+            <button class="nav-btn" data-view="vote">👍 Vote</button>
+            <button class="nav-btn" data-view="profile">👤 Profile</button>
+        </nav>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
