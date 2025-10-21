@@ -1,10 +1,8 @@
-// SwipeTake API - Cloudflare Worker
 export default {
     async fetch(request, env) {
         const url = new URL(request.url);
         const path = url.pathname;
 
-        // CORS headers
         const corsHeaders = {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -15,9 +13,12 @@ export default {
             return new Response(null, { headers: corsHeaders });
         }
 
-        // Routes
         if (path === '/debates/random' && request.method === 'GET') {
             return getRandomDebate(env, corsHeaders);
+        }
+
+        if (path === '/debates' && request.method === 'POST') {
+            return createDebate(request, env, corsHeaders);
         }
 
         if (path === '/arguments' && request.method === 'POST') {
@@ -46,6 +47,17 @@ async function getRandomDebate(env, corsHeaders) {
     }
 
     return Response.json(debates.results[0], { headers: corsHeaders });
+}
+
+async function createDebate(request, env, corsHeaders) {
+    const body = await request.json();
+    const { prompt, vibe, max_responses, user_id } = body;
+
+    await env.DB.prepare(
+        'INSERT INTO debates (prompt, vibe, max_responses) VALUES (?, ?, ?)'
+    ).bind(prompt, vibe || 'Fun', max_responses || 10).run();
+
+    return Response.json({ success: true }, { headers: corsHeaders });
 }
 
 async function createArgument(request, env, corsHeaders) {

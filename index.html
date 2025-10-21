@@ -8,7 +8,6 @@
 </head>
 <body>
     <div id="app">
-        <!-- Header -->
         <header>
             <h1>🔥 SwipeTake</h1>
             <div class="stats">
@@ -17,50 +16,131 @@
             </div>
         </header>
 
-        <!-- Main Feed -->
-        <div id="feed" class="feed">
-            <div class="card" id="debate-card">
-                <div class="prompt-container">
-                    <span class="vibe-tag" id="vibe-tag">#Fun</span>
-                    <h2 id="prompt-text">Loading debates...</h2>
-                    <p class="slots" id="slots">0/10 responses</p>
-                </div>
-                
-                <div class="actions">
-                    <button class="btn-primary" id="btn-argue">Argue This 🗣️</button>
-                    <button class="btn-secondary" id="btn-skip">Skip →</button>
+        <div id="feed-view" class="view active">
+            <div class="feed">
+                <div class="card" id="debate-card">
+                    <div class="prompt-container">
+                        <span class="vibe-tag" id="vibe-tag">#Fun</span>
+                        <h2 id="prompt-text">Loading debates...</h2>
+                        <p class="slots" id="slots">0/10 responses</p>
+                    </div>
+                    
+                    <div class="actions">
+                        <button class="btn-primary" id="btn-argue">Argue This 🗣️</button>
+                        <button class="btn-secondary" id="btn-skip">Skip →</button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Argue Modal -->
+        <div id="create-view" class="view">
+            <div class="create-container">
+                <h2>Create a Debate</h2>
+                <p class="subtitle">Spark a discussion and watch the takes roll in</p>
+                
+                <div class="form-group">
+                    <label>Your Statement</label>
+                    <textarea id="create-prompt" placeholder="e.g., Pineapple on pizza is a crime" maxlength="200"></textarea>
+                    <div class="char-count"><span id="prompt-char-count">0</span>/200</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Vibe</label>
+                    <select id="create-vibe">
+                        <option value="Fun">🎉 Fun</option>
+                        <option value="Deep">🧠 Deep</option>
+                        <option value="Spicy">🌶️ Spicy</option>
+                        <option value="Change My View">💭 Change My View</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Max Responses</label>
+                    <select id="create-max">
+                        <option value="5">5 responses</option>
+                        <option value="10" selected>10 responses</option>
+                        <option value="20">20 responses</option>
+                    </select>
+                </div>
+
+                <button class="btn-primary btn-large" id="btn-create-debate">Post Debate 🚀</button>
+            </div>
+        </div>
+
+        <div id="vote-view" class="view">
+            <div class="vote-container">
+                <h2>Vote on Arguments</h2>
+                <p class="subtitle">Swipe through and crown the best takes</p>
+                <div id="vote-list"></div>
+            </div>
+        </div>
+
+        <div id="profile-view" class="view">
+            <div class="profile-container">
+                <div class="profile-header">
+                    <div class="avatar">🎯</div>
+                    <h2>Debater</h2>
+                    <p class="level-badge" id="profile-level">Level 1</p>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="profile-xp">0</div>
+                        <div class="stat-label">Total XP</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="profile-debates">0</div>
+                        <div class="stat-label">Debates</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="profile-wins">0</div>
+                        <div class="stat-label">Wins</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="profile-votes">0</div>
+                        <div class="stat-label">Votes Cast</div>
+                    </div>
+                </div>
+
+                <div class="badges-section">
+                    <h3>Badges</h3>
+                    <div class="badges-grid">
+                        <div class="badge">🔥 First Debate</div>
+                        <div class="badge locked">🏆 10 Wins</div>
+                        <div class="badge locked">⚡ Speed Demon</div>
+                        <div class="badge locked">🎯 Sharp Shooter</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="argue-modal" class="modal hidden">
             <div class="modal-content">
                 <h3>Make Your Case</h3>
                 <p id="modal-prompt"></p>
                 <select id="side-select">
-                    <option value="for">For</option>
-                    <option value="against">Against</option>
+                    <option value="for">✅ For</option>
+                    <option value="against">❌ Against</option>
                 </select>
                 <textarea id="argument-input" placeholder="Your argument (max 200 chars)..." maxlength="200"></textarea>
+                <div class="char-count"><span id="arg-char-count">0</span>/200</div>
                 <div class="timer" id="timer">30s</div>
                 <div class="modal-actions">
-                    <button id="btn-submit">Submit 🚀</button>
-                    <button id="btn-cancel">Cancel</button>
+                    <button class="btn-primary" id="btn-submit">Submit 🚀</button>
+                    <button class="btn-secondary" id="btn-cancel">Cancel</button>
                 </div>
             </div>
         </div>
 
-        <!-- Vote Modal -->
-        <div id="vote-modal" class="modal hidden">
-            <div class="modal-content">
-                <h3>Vote on Arguments</h3>
-                <div id="vote-list"></div>
-                <button id="btn-done-voting">Done Voting</button>
+        <div id="success-modal" class="modal hidden">
+            <div class="modal-content success-content">
+                <div class="success-icon">🎉</div>
+                <h3 id="success-title">Argument Posted!</h3>
+                <p id="success-message">+5 XP earned</p>
+                <button class="btn-primary" id="btn-close-success">Continue</button>
             </div>
         </div>
 
-        <!-- Bottom Nav -->
         <nav>
             <button class="nav-btn active" data-view="feed">🔥 Feed</button>
             <button class="nav-btn" data-view="create">➕ Create</button>
