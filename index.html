@@ -7,10 +7,27 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="app">
-        <header>
+    <div id="auth-screen" class="auth-screen">
+        <div class="auth-container">
             <h1>🔥 SwipeTake</h1>
+            <p class="auth-subtitle">Argue. Win. Level Up.</p>
+            
+            <div class="auth-form">
+                <input type="text" id="username-input" placeholder="Enter a username" maxlength="20">
+                <button class="btn-primary btn-large" id="btn-login">Start Arguing 🚀</button>
+            </div>
+            
+            <p class="auth-note">Your username will be saved for future sessions</p>
+        </div>
+    </div>
+
+    <div id="app" class="hidden">
+        <header>
+            <div class="header-left">
+                <h1>🔥 SwipeTake</h1>
+            </div>
             <div class="stats">
+                <span id="username-display" class="username-chip"></span>
                 <span id="level">Level 1</span>
                 <span id="xp">0 XP</span>
             </div>
@@ -79,7 +96,7 @@
             <div class="profile-container">
                 <div class="profile-header">
                     <div class="avatar">🎯</div>
-                    <h2>Debater</h2>
+                    <h2 id="profile-username">Debater</h2>
                     <p class="level-badge" id="profile-level">Level 1</p>
                 </div>
                 
@@ -111,6 +128,8 @@
                         <div class="badge locked">🎯 Sharp Shooter</div>
                     </div>
                 </div>
+
+                <button class="btn-secondary btn-large" id="btn-logout" style="margin-top: 24px;">Logout</button>
             </div>
         </div>
 

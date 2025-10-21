@@ -6,13 +6,23 @@ export default {
         const corsHeaders = {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         };
 
         if (request.method === 'OPTIONS') {
             return new Response(null, { headers: corsHeaders });
         }
 
+        // Auth routes
+        if (path === '/auth/login' && request.method === 'POST') {
+            return login(request, env, corsHeaders);
+        }
+
+        if (path === '/auth/verify' && request.method === 'POST') {
+            return verifySession(request, env, corsHeaders);
+        }
+
+        // Debate routes
         if (path === '/debates/random' && request.method === 'GET') {
             return getRandomDebate(env, corsHeaders);
         }
@@ -36,6 +46,75 @@ export default {
         return new Response('Not Found', { status: 404, headers: corsHeaders });
     }
 };
+
+async function login(request, env, corsHeaders) {
+    const body = await request.json();
+    const { username } = body;
+
+    if (!username || username.length < 3) {
+        return Response.json({ error: 'Username must be at least 3 characters' }, { status: 400, headers: corsHeaders });
+    }
+
+    // Check if user exists
+    let user = await env.DB.prepare(
+        'SELECT * FROM users WHERE username = ?'
+    ).bind(username).first();
+
+    // Create user if doesn't exist
+    if (!user) {
+        await env.DB.prepare(
+            'INSERT INTO users (username, xp, level) VALUES (?, 0, 1)'
+        ).bind(username).run();
+
+        user = await env.DB.prepare(
+            'SELECT * FROM users WHERE username = ?'
+        ).bind(username).first();
+    }
+
+    // Create session
+    const sessionToken = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days
+
+    await env.DB.prepare(
+        'INSERT INTO sessions (user_id, session_token, expires_at) VALUES (?, ?, ?)'
+    ).bind(user.id, sessionToken, expiresAt).run();
+
+    return Response.json({
+        user: {
+            id: user.id,
+            username: user.username,
+            xp: user.xp,
+            level: user.level
+        },
+        session_token: sessionToken
+    }, { headers: corsHeaders });
+}
+
+async function verifySession(request, env, corsHeaders) {
+    const body = await request.json();
+    const { session_token } = body;
+
+    const session = await env.DB.prepare(
+        'SELECT * FROM sessions WHERE session_token = ? AND expires_at > datetime("now")'
+    ).bind(session_token).first();
+
+    if (!session) {
+        return Response.json({ error: 'Invalid session' }, { status: 401, headers: corsHeaders });
+    }
+
+    const user = await env.DB.prepare(
+        'SELECT * FROM users WHERE id = ?'
+    ).bind(session.user_id).first();
+
+    return Response.json({
+        user: {
+            id: user.id,
+            username: user.username,
+            xp: user.xp,
+            level: user.level
+        }
+    }, { headers: corsHeaders });
+}
 
 async function getRandomDebate(env, corsHeaders) {
     const debates = await env.DB.prepare(

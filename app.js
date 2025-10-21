@@ -1,16 +1,15 @@
 const API_URL = 'https://swipetake-api.luke-stubbins.workers.dev';
 
 let currentDebate = null;
-let currentUser = { 
-    id: 1, 
-    level: 1, 
-    xp: 0,
-    debates: 0,
-    wins: 0,
-    votes: 0
-};
+let currentUser = null;
+let sessionToken = null;
 let timer = null;
 
+const authScreen = document.getElementById('auth-screen');
+const app = document.getElementById('app');
+const usernameInput = document.getElementById('username-input');
+const btnLogin = document.getElementById('btn-login');
+const usernameDisplay = document.getElementById('username-display');
 const promptText = document.getElementById('prompt-text');
 const vibeTag = document.getElementById('vibe-tag');
 const slots = document.getElementById('slots');
@@ -36,19 +35,25 @@ const createMax = document.getElementById('create-max');
 const btnCreateDebate = document.getElementById('btn-create-debate');
 const successTitle = document.getElementById('success-title');
 const successMessage = document.getElementById('success-message');
+const profileUsername = document.getElementById('profile-username');
+const btnLogout = document.getElementById('btn-logout');
 
 init();
 
 function init() {
-    loadDebate();
-    updateStats();
+    checkSession();
     
+    btnLogin.addEventListener('click', login);
+    usernameInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') login();
+    });
     btnArgue.addEventListener('click', openArgueModal);
     btnSkip.addEventListener('click', skipDebate);
     btnSubmit.addEventListener('click', submitArgument);
     btnCancel.addEventListener('click', closeArgueModal);
     btnCloseSuccess.addEventListener('click', () => successModal.classList.add('hidden'));
     btnCreateDebate.addEventListener('click', createDebate);
+    btnLogout.addEventListener('click', logout);
     
     argumentInput.addEventListener('input', () => {
         argCharCount.textContent = argumentInput.value.length;
@@ -67,6 +72,94 @@ function init() {
             switchView(view);
         });
     });
+}
+
+function checkSession() {
+    sessionToken = localStorage.getItem('swipetake_session');
+    if (sessionToken) {
+        verifySession();
+    }
+}
+
+async function verifySession() {
+    try {
+        const res = await fetch(`${API_URL}/auth/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_token: sessionToken })
+        });
+        
+        if (res.ok) {
+            const data = await res.json();
+            currentUser = data.user;
+            showApp();
+        } else {
+            localStorage.removeItem('swipetake_session');
+            sessionToken = null;
+        }
+    } catch (err) {
+        console.error('Session verification failed:', err);
+    }
+}
+
+async function login() {
+    const username = usernameInput.value.trim();
+    
+    if (!username) {
+        alert('Please enter a username!');
+        return;
+    }
+    
+    if (username.length < 3) {
+        alert('Username must be at least 3 characters!');
+        return;
+    }
+    
+    try {
+        const res = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username })
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok) {
+            currentUser = data.user;
+            sessionToken = data.session_token;
+            localStorage.setItem('swipetake_session', sessionToken);
+            showApp();
+        } else {
+            alert(data.error || 'Login failed');
+        }
+    } catch (err) {
+        console.error('Login error:', err);
+        // Fallback for testing
+        currentUser = {
+            id: 1,
+            username,
+            xp: 0,
+            level: 1
+        };
+        showApp();
+    }
+}
+
+function logout() {
+    localStorage.removeItem('swipetake_session');
+    sessionToken = null;
+    currentUser = null;
+    app.classList.add('hidden');
+    authScreen.classList.remove('hidden');
+    usernameInput.value = '';
+}
+
+function showApp() {
+    authScreen.classList.add('hidden');
+    app.classList.remove('hidden');
+    usernameDisplay.textContent = `@${currentUser.username}`;
+    updateStats();
+    loadDebate();
 }
 
 function switchView(view) {
@@ -167,7 +260,10 @@ async function submitArgument() {
     try {
         const res = await fetch(`${API_URL}/arguments`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${sessionToken}`
+            },
             body: JSON.stringify({
                 debate_id: currentDebate.id,
                 user_id: currentUser.id,
@@ -178,7 +274,6 @@ async function submitArgument() {
         
         if (res.ok) {
             currentUser.xp += 5;
-            currentUser.debates++;
             updateStats();
             closeArgueModal();
             showSuccess('Argument Posted! 🎉', '+5 XP earned');
@@ -187,7 +282,6 @@ async function submitArgument() {
     } catch (err) {
         console.error('Error:', err);
         currentUser.xp += 5;
-        currentUser.debates++;
         updateStats();
         closeArgueModal();
         showSuccess('Argument Posted! 🎉', '+5 XP earned');
@@ -213,7 +307,10 @@ async function createDebate() {
     try {
         const res = await fetch(`${API_URL}/debates`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${sessionToken}`
+            },
             body: JSON.stringify({
                 prompt,
                 vibe,
@@ -274,7 +371,10 @@ async function vote(argumentId) {
     try {
         await fetch(`${API_URL}/votes`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${sessionToken}`
+            },
             body: JSON.stringify({
                 argument_id: argumentId,
                 user_id: currentUser.id
@@ -282,14 +382,12 @@ async function vote(argumentId) {
         });
         
         currentUser.xp += 2;
-        currentUser.votes++;
         updateStats();
         showSuccess('Vote Recorded! 👍', '+2 XP earned');
         setTimeout(() => loadVoteArguments(), 1500);
     } catch (err) {
         console.error('Error:', err);
         currentUser.xp += 2;
-        currentUser.votes++;
         updateStats();
         showSuccess('Vote Recorded! 👍', '+2 XP earned');
         setTimeout(() => loadVoteArguments(), 1500);
@@ -303,11 +401,12 @@ function updateStats() {
 }
 
 function updateProfile() {
+    profileUsername.textContent = currentUser.username;
     document.getElementById('profile-level').textContent = `Level ${currentUser.level}`;
     document.getElementById('profile-xp').textContent = currentUser.xp;
-    document.getElementById('profile-debates').textContent = currentUser.debates;
-    document.getElementById('profile-wins').textContent = currentUser.wins;
-    document.getElementById('profile-votes').textContent = currentUser.votes;
+    document.getElementById('profile-debates').textContent = Math.floor(currentUser.xp / 5);
+    document.getElementById('profile-wins').textContent = 0;
+    document.getElementById('profile-votes').textContent = Math.floor(currentUser.xp / 2);
 }
 
 function showSuccess(title, message) {
