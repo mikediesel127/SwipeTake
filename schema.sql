@@ -1,30 +1,42 @@
--- SwipeTake Database Schema for Cloudflare D1
+-- SwipeTake Battle Royale Database
 
 CREATE TABLE IF NOT EXISTS debates (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     prompt TEXT NOT NULL,
     vibe TEXT DEFAULT 'Fun',
+    creator_id INTEGER NOT NULL,
     response_count INTEGER DEFAULT 0,
     max_responses INTEGER DEFAULT 10,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    status TEXT DEFAULT 'active',
+    winner_id INTEGER,
+    ends_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (creator_id) REFERENCES users(id),
+    FOREIGN KEY (winner_id) REFERENCES arguments(id)
 );
 
 CREATE TABLE IF NOT EXISTS arguments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     debate_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
+    username TEXT NOT NULL,
     side TEXT NOT NULL,
     text TEXT NOT NULL,
     votes INTEGER DEFAULT 0,
+    is_winner BOOLEAN DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (debate_id) REFERENCES debates(id)
+    FOREIGN KEY (debate_id) REFERENCES debates(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE,
+    username TEXT UNIQUE NOT NULL,
     xp INTEGER DEFAULT 0,
     level INTEGER DEFAULT 1,
+    wins INTEGER DEFAULT 0,
+    losses INTEGER DEFAULT 0,
+    streak INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -38,11 +50,13 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_session_token ON sessions(session_token);
+CREATE INDEX IF NOT EXISTS idx_debate_status ON debates(status);
+CREATE INDEX IF NOT EXISTS idx_user_xp ON users(xp DESC);
 
--- Seed some debates
-INSERT INTO debates (prompt, vibe, max_responses) VALUES
-('Pineapple on pizza is a crime', 'Fun', 10),
-('Remote work kills creativity', 'Deep', 10),
-('AI will replace teachers', 'Deep', 10),
-('Cats are better than dogs', 'Fun', 10),
-('Social media is ruining us', 'Deep', 10);
+-- Seed some battle prompts
+INSERT INTO debates (prompt, vibe, creator_id, max_responses, ends_at) VALUES
+('Remote work kills creativity and innovation', 'Deep', 1, 10, datetime('now', '+10 minutes')),
+('Pineapple on pizza is actually elite', 'Fun', 1, 10, datetime('now', '+10 minutes')),
+('AI will replace 80% of jobs by 2030', 'Deep', 1, 10, datetime('now', '+10 minutes')),
+('Cats are objectively better than dogs', 'Fun', 1, 10, datetime('now', '+10 minutes')),
+('Social media does more harm than good', 'Deep', 1, 10, datetime('now', '+10 minutes'));

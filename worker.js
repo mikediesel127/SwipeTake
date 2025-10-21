@@ -13,7 +13,6 @@ export default {
             return new Response(null, { headers: corsHeaders });
         }
 
-        // Auth routes
         if (path === '/auth/login' && request.method === 'POST') {
             return login(request, env, corsHeaders);
         }
@@ -22,7 +21,6 @@ export default {
             return verifySession(request, env, corsHeaders);
         }
 
-        // Debate routes
         if (path === '/debates/random' && request.method === 'GET') {
             return getRandomDebate(env, corsHeaders);
         }
@@ -35,12 +33,12 @@ export default {
             return createArgument(request, env, corsHeaders);
         }
 
-        if (path === '/arguments/pending' && request.method === 'GET') {
-            return getPendingArguments(env, corsHeaders);
+        if (path === '/leaderboard' && request.method === 'GET') {
+            return getLeaderboard(env, corsHeaders);
         }
 
-        if (path === '/votes' && request.method === 'POST') {
-            return createVote(request, env, corsHeaders);
+        if (path === '/stats' && request.method === 'GET') {
+            return getStats(env, corsHeaders);
         }
 
         return new Response('Not Found', { status: 404, headers: corsHeaders });
@@ -55,15 +53,13 @@ async function login(request, env, corsHeaders) {
         return Response.json({ error: 'Username must be at least 3 characters' }, { status: 400, headers: corsHeaders });
     }
 
-    // Check if user exists
     let user = await env.DB.prepare(
         'SELECT * FROM users WHERE username = ?'
     ).bind(username).first();
 
-    // Create user if doesn't exist
     if (!user) {
         await env.DB.prepare(
-            'INSERT INTO users (username, xp, level) VALUES (?, 0, 1)'
+            'INSERT INTO users (username, xp, level, wins, losses, streak) VALUES (?, 0, 1, 0, 0, 0)'
         ).bind(username).run();
 
         user = await env.DB.prepare(
@@ -71,9 +67,8 @@ async function login(request, env, corsHeaders) {
         ).bind(username).first();
     }
 
-    // Create session
     const sessionToken = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
     await env.DB.prepare(
         'INSERT INTO sessions (user_id, session_token, expires_at) VALUES (?, ?, ?)'
@@ -84,7 +79,10 @@ async function login(request, env, corsHeaders) {
             id: user.id,
             username: user.username,
             xp: user.xp,
-            level: user.level
+            level: user.level,
+            wins: user.wins,
+            losses: user.losses,
+            streak: user.streak
         },
         session_token: sessionToken
     }, { headers: corsHeaders });
@@ -111,18 +109,21 @@ async function verifySession(request, env, corsHeaders) {
             id: user.id,
             username: user.username,
             xp: user.xp,
-            level: user.level
+            level: user.level,
+            wins: user.wins,
+            losses: user.losses,
+            streak: user.streak
         }
     }, { headers: corsHeaders });
 }
 
 async function getRandomDebate(env, corsHeaders) {
     const debates = await env.DB.prepare(
-        'SELECT * FROM debates WHERE response_count < max_responses ORDER BY RANDOM() LIMIT 1'
-    ).all();
+        'SELECT * FROM debates WHERE status = ? AND response_count < max_responses ORDER BY RANDOM() LIMIT 1'
+    ).bind('active').all();
 
     if (debates.results.length === 0) {
-        return Response.json({ error: 'No debates available' }, { status: 404, headers: corsHeaders });
+        return Response.json({ error: 'No active battles' }, { status: 404, headers: corsHeaders });
     }
 
     return Response.json(debates.results[0], { headers: corsHeaders });
@@ -130,22 +131,24 @@ async function getRandomDebate(env, corsHeaders) {
 
 async function createDebate(request, env, corsHeaders) {
     const body = await request.json();
-    const { prompt, vibe, max_responses, user_id } = body;
+    const { prompt, vibe, max_responses, creator_id } = body;
+
+    const endsAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
     await env.DB.prepare(
-        'INSERT INTO debates (prompt, vibe, max_responses) VALUES (?, ?, ?)'
-    ).bind(prompt, vibe || 'Fun', max_responses || 10).run();
+        'INSERT INTO debates (prompt, vibe, creator_id, max_responses, status, ends_at) VALUES (?, ?, ?, ?, ?, ?)'
+    ).bind(prompt, vibe || 'Fun', creator_id, max_responses || 10, 'active', endsAt).run();
 
     return Response.json({ success: true }, { headers: corsHeaders });
 }
 
 async function createArgument(request, env, corsHeaders) {
     const body = await request.json();
-    const { debate_id, user_id, side, text } = body;
+    const { debate_id, user_id, username, side, text } = body;
 
     await env.DB.prepare(
-        'INSERT INTO arguments (debate_id, user_id, side, text) VALUES (?, ?, ?, ?)'
-    ).bind(debate_id, user_id, side, text).run();
+        'INSERT INTO arguments (debate_id, user_id, username, side, text) VALUES (?, ?, ?, ?, ?)'
+    ).bind(debate_id, user_id, username, side, text).run();
 
     await env.DB.prepare(
         'UPDATE debates SET response_count = response_count + 1 WHERE id = ?'
@@ -154,21 +157,20 @@ async function createArgument(request, env, corsHeaders) {
     return Response.json({ success: true }, { headers: corsHeaders });
 }
 
-async function getPendingArguments(env, corsHeaders) {
-    const args = await env.DB.prepare(
-        'SELECT * FROM arguments WHERE votes < 5 ORDER BY RANDOM() LIMIT 10'
+async function getLeaderboard(env, corsHeaders) {
+    const leaders = await env.DB.prepare(
+        'SELECT username, xp, wins, losses, streak FROM users ORDER BY xp DESC LIMIT 10'
     ).all();
 
-    return Response.json(args.results, { headers: corsHeaders });
+    return Response.json(leaders.results, { headers: corsHeaders });
 }
 
-async function createVote(request, env, corsHeaders) {
-    const body = await request.json();
-    const { argument_id, user_id } = body;
+async function getStats(env, corsHeaders) {
+    const liveCount = await env.DB.prepare(
+        'SELECT COUNT(*) as count FROM debates WHERE status = ?'
+    ).bind('active').first();
 
-    await env.DB.prepare(
-        'UPDATE arguments SET votes = votes + 1 WHERE id = ?'
-    ).bind(argument_id).run();
-
-    return Response.json({ success: true }, { headers: corsHeaders });
+    return Response.json({
+        live_battles: liveCount.count
+    }, { headers: corsHeaders });
 }

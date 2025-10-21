@@ -4,39 +4,57 @@ let currentDebate = null;
 let currentUser = null;
 let sessionToken = null;
 let timer = null;
+let timerInterval = null;
+let currentSide = null;
 
 const authScreen = document.getElementById('auth-screen');
 const app = document.getElementById('app');
 const usernameInput = document.getElementById('username-input');
 const btnLogin = document.getElementById('btn-login');
 const usernameDisplay = document.getElementById('username-display');
+const xpDisplay = document.getElementById('xp');
+const levelDisplay = document.getElementById('level');
+const streakDisplay = document.getElementById('streak-display');
+const streakValue = document.getElementById('streak');
+const liveCount = document.getElementById('live-count');
+const record = document.getElementById('record');
 const promptText = document.getElementById('prompt-text');
 const vibeTag = document.getElementById('vibe-tag');
 const slots = document.getElementById('slots');
-const btnArgue = document.getElementById('btn-argue');
+const battleStatus = document.getElementById('battle-status');
+const battleTimer = document.getElementById('battle-timer');
+const timerDisplayEl = document.getElementById('timer-display');
+const btnArgueFor = document.getElementById('btn-argue-for');
+const btnArgueAgainst = document.getElementById('btn-argue-against');
 const btnSkip = document.getElementById('btn-skip');
 const argueModal = document.getElementById('argue-modal');
-const successModal = document.getElementById('success-modal');
+const winnerModal = document.getElementById('winner-modal');
+const modalSide = document.getElementById('modal-side');
 const modalPrompt = document.getElementById('modal-prompt');
 const argumentInput = document.getElementById('argument-input');
-const sideSelect = document.getElementById('side-select');
-const timerDisplay = document.getElementById('timer');
+const btnCloseArgue = document.getElementById('btn-close-argue');
 const btnSubmit = document.getElementById('btn-submit');
-const btnCancel = document.getElementById('btn-cancel');
-const btnCloseSuccess = document.getElementById('btn-close-success');
-const levelDisplay = document.getElementById('level');
-const xpDisplay = document.getElementById('xp');
-const voteList = document.getElementById('vote-list');
+const btnCloseWinner = document.getElementById('btn-close-winner');
 const argCharCount = document.getElementById('arg-char-count');
 const promptCharCount = document.getElementById('prompt-char-count');
 const createPrompt = document.getElementById('create-prompt');
 const createVibe = document.getElementById('create-vibe');
 const createMax = document.getElementById('create-max');
 const btnCreateDebate = document.getElementById('btn-create-debate');
-const successTitle = document.getElementById('success-title');
-const successMessage = document.getElementById('success-message');
+const winnerTitle = document.getElementById('winner-title');
+const winnerMessage = document.getElementById('winner-message');
+const leaderboardList = document.getElementById('leaderboard-list');
 const profileUsername = document.getElementById('profile-username');
+const profileLevel = document.getElementById('profile-level');
+const profileStreak = document.getElementById('profile-streak');
+const profileXp = document.getElementById('profile-xp');
+const profileWins = document.getElementById('profile-wins');
+const profileLosses = document.getElementById('profile-losses');
+const profileWinrate = document.getElementById('profile-winrate');
 const btnLogout = document.getElementById('btn-logout');
+const timerBar = document.getElementById('timer-bar');
+const timerFill = document.getElementById('timer-fill');
+const timerText = document.getElementById('timer-text');
 
 init();
 
@@ -47,11 +65,12 @@ function init() {
     usernameInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') login();
     });
-    btnArgue.addEventListener('click', openArgueModal);
+    btnArgueFor.addEventListener('click', () => openArgueModal('for'));
+    btnArgueAgainst.addEventListener('click', () => openArgueModal('against'));
     btnSkip.addEventListener('click', skipDebate);
     btnSubmit.addEventListener('click', submitArgument);
-    btnCancel.addEventListener('click', closeArgueModal);
-    btnCloseSuccess.addEventListener('click', () => successModal.classList.add('hidden'));
+    btnCloseArgue.addEventListener('click', closeArgueModal);
+    btnCloseWinner.addEventListener('click', () => winnerModal.classList.add('hidden'));
     btnCreateDebate.addEventListener('click', createDebate);
     btnLogout.addEventListener('click', logout);
     
@@ -106,12 +125,12 @@ async function login() {
     const username = usernameInput.value.trim();
     
     if (!username) {
-        alert('Please enter a username!');
+        alert('ENTER A USERNAME');
         return;
     }
     
     if (username.length < 3) {
-        alert('Username must be at least 3 characters!');
+        alert('USERNAME MUST BE AT LEAST 3 CHARACTERS');
         return;
     }
     
@@ -130,16 +149,18 @@ async function login() {
             localStorage.setItem('swipetake_session', sessionToken);
             showApp();
         } else {
-            alert(data.error || 'Login failed');
+            alert(data.error || 'LOGIN FAILED');
         }
     } catch (err) {
         console.error('Login error:', err);
-        // Fallback for testing
         currentUser = {
             id: 1,
             username,
             xp: 0,
-            level: 1
+            level: 1,
+            wins: 0,
+            losses: 0,
+            streak: 0
         };
         showApp();
     }
@@ -160,14 +181,16 @@ function showApp() {
     usernameDisplay.textContent = `@${currentUser.username}`;
     updateStats();
     loadDebate();
+    updateLiveStats();
 }
 
 function switchView(view) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById(`${view}-view`).classList.add('active');
     
-    if (view === 'vote') loadVoteArguments();
+    if (view === 'leaderboard') loadLeaderboard();
     if (view === 'profile') updateProfile();
+    if (view === 'feed') loadDebate();
 }
 
 async function loadDebate() {
@@ -179,52 +202,104 @@ async function loadDebate() {
             currentDebate = await res.json();
             
             promptText.textContent = currentDebate.prompt;
-            vibeTag.textContent = `#${currentDebate.vibe}`;
-            slots.textContent = `${currentDebate.response_count}/${currentDebate.max_responses} responses`;
+            vibeTag.textContent = `#${currentDebate.vibe.toUpperCase()}`;
+            slots.textContent = `${currentDebate.response_count}/${currentDebate.max_responses} FIGHTERS`;
+            
+            if (currentDebate.status === 'ended') {
+                battleStatus.textContent = 'ENDED';
+                battleStatus.classList.add('ended');
+                btnArgueFor.disabled = true;
+                btnArgueAgainst.disabled = true;
+            } else {
+                battleStatus.textContent = 'LIVE';
+                battleStatus.classList.remove('ended');
+                btnArgueFor.disabled = false;
+                btnArgueAgainst.disabled = false;
+                startBattleTimer(currentDebate.ends_at);
+            }
             
             animateCardIn();
         } catch (err) {
             console.error('Error:', err);
             currentDebate = {
                 id: Math.floor(Math.random() * 1000),
-                prompt: "Pineapple on pizza is a crime",
-                vibe: "Fun",
+                prompt: "Remote work kills creativity and innovation",
+                vibe: "Deep",
                 response_count: 3,
-                max_responses: 10
+                max_responses: 10,
+                status: 'active',
+                ends_at: new Date(Date.now() + 10 * 60 * 1000).toISOString()
             };
             promptText.textContent = currentDebate.prompt;
-            vibeTag.textContent = `#${currentDebate.vibe}`;
-            slots.textContent = `${currentDebate.response_count}/${currentDebate.max_responses} responses`;
+            vibeTag.textContent = `#${currentDebate.vibe.toUpperCase()}`;
+            slots.textContent = `${currentDebate.response_count}/${currentDebate.max_responses} FIGHTERS`;
+            battleStatus.textContent = 'LIVE';
+            startBattleTimer(currentDebate.ends_at);
             animateCardIn();
         }
     }, 300);
 }
 
+function startBattleTimer(endsAt) {
+    if (timerInterval) clearInterval(timerInterval);
+    
+    timerInterval = setInterval(() => {
+        const now = new Date();
+        const end = new Date(endsAt);
+        const diff = end - now;
+        
+        if (diff <= 0) {
+            battleTimer.textContent = '0:00';
+            timerDisplayEl.classList.add('urgent');
+            clearInterval(timerInterval);
+            return;
+        }
+        
+        const minutes = Math.floor(diff / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+        battleTimer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        if (diff < 120000) {
+            timerDisplayEl.classList.add('urgent');
+        }
+    }, 1000);
+}
+
 function skipDebate() {
+    if (timerInterval) clearInterval(timerInterval);
     loadDebate();
 }
 
 function animateCardOut() {
-    const card = document.getElementById('debate-card');
-    card.style.transform = 'translateX(-100%) rotate(-10deg)';
+    const card = document.getElementById('battle-card');
+    card.style.transform = 'translateX(-100%) rotate(-5deg)';
     card.style.opacity = '0';
 }
 
 function animateCardIn() {
-    const card = document.getElementById('debate-card');
+    const card = document.getElementById('battle-card');
     setTimeout(() => {
-        card.style.transform = 'translateY(0) scale(1)';
+        card.style.transform = 'translateX(0) rotate(0)';
         card.style.opacity = '1';
     }, 50);
 }
 
-function openArgueModal() {
+function openArgueModal(side) {
     if (currentDebate.response_count >= currentDebate.max_responses) {
-        showSuccess('Debate Full!', 'This debate has reached max responses. Try another!');
-        loadDebate();
+        showWinner('BATTLE FULL!', 'This battle has reached max fighters. Try another!');
+        skipDebate();
         return;
     }
     
+    if (currentDebate.status === 'ended') {
+        showWinner('BATTLE ENDED!', 'This battle is over. Find a live one!');
+        skipDebate();
+        return;
+    }
+    
+    currentSide = side;
+    modalSide.textContent = side === 'for' ? 'FIGHTING FOR' : 'FIGHTING AGAINST';
+    modalSide.style.color = side === 'for' ? '#00ffff' : '#ff006e';
     modalPrompt.textContent = currentDebate.prompt;
     argueModal.classList.remove('hidden');
     argumentInput.value = '';
@@ -232,13 +307,18 @@ function openArgueModal() {
     argumentInput.focus();
     
     let timeLeft = 30;
-    timerDisplay.textContent = `${timeLeft}s`;
+    timerText.textContent = `${timeLeft}s`;
+    timerFill.style.width = '100%';
+    
     timer = setInterval(() => {
         timeLeft--;
-        timerDisplay.textContent = `${timeLeft}s`;
+        const percentage = (timeLeft / 30) * 100;
+        timerFill.style.width = `${percentage}%`;
+        timerText.textContent = `${timeLeft}s`;
+        
         if (timeLeft <= 0) {
             clearInterval(timer);
-            timerDisplay.textContent = "Time's up!";
+            timerText.textContent = "TIME'S UP!";
         }
     }, 1000);
 }
@@ -250,10 +330,9 @@ function closeArgueModal() {
 
 async function submitArgument() {
     const argument = argumentInput.value.trim();
-    const side = sideSelect.value;
     
     if (!argument) {
-        alert('Please write an argument!');
+        alert('WRITE AN ARGUMENT!');
         return;
     }
     
@@ -267,7 +346,8 @@ async function submitArgument() {
             body: JSON.stringify({
                 debate_id: currentDebate.id,
                 user_id: currentUser.id,
-                side,
+                username: currentUser.username,
+                side: currentSide,
                 text: argument
             })
         });
@@ -276,16 +356,16 @@ async function submitArgument() {
             currentUser.xp += 5;
             updateStats();
             closeArgueModal();
-            showSuccess('Argument Posted! 🎉', '+5 XP earned');
-            setTimeout(() => loadDebate(), 2000);
+            showWinner('ARGUMENT POSTED! ⚔️', '+5 XP');
+            setTimeout(() => skipDebate(), 2000);
         }
     } catch (err) {
         console.error('Error:', err);
         currentUser.xp += 5;
         updateStats();
         closeArgueModal();
-        showSuccess('Argument Posted! 🎉', '+5 XP earned');
-        setTimeout(() => loadDebate(), 2000);
+        showWinner('ARGUMENT POSTED! ⚔️', '+5 XP');
+        setTimeout(() => skipDebate(), 2000);
     }
 }
 
@@ -295,12 +375,12 @@ async function createDebate() {
     const maxResponses = parseInt(createMax.value);
     
     if (!prompt) {
-        alert('Please enter a debate statement!');
+        alert('ENTER A STATEMENT!');
         return;
     }
     
     if (prompt.length < 10) {
-        alert('Make your statement at least 10 characters!');
+        alert('STATEMENT MUST BE AT LEAST 10 CHARACTERS!');
         return;
     }
     
@@ -315,7 +395,7 @@ async function createDebate() {
                 prompt,
                 vibe,
                 max_responses: maxResponses,
-                user_id: currentUser.id
+                creator_id: currentUser.id
             })
         });
         
@@ -324,7 +404,7 @@ async function createDebate() {
             updateStats();
             createPrompt.value = '';
             promptCharCount.textContent = '0';
-            showSuccess('Debate Created! 🚀', '+10 XP earned');
+            showWinner('BATTLE LAUNCHED! 🚀', '+10 XP');
             setTimeout(() => switchView('feed'), 2000);
         }
     } catch (err) {
@@ -333,86 +413,97 @@ async function createDebate() {
         updateStats();
         createPrompt.value = '';
         promptCharCount.textContent = '0';
-        showSuccess('Debate Created! 🚀', '+10 XP earned');
+        showWinner('BATTLE LAUNCHED! 🚀', '+10 XP');
         setTimeout(() => switchView('feed'), 2000);
     }
 }
 
-async function loadVoteArguments() {
+async function loadLeaderboard() {
     try {
-        const res = await fetch(`${API_URL}/arguments/pending`);
-        const args = await res.json();
+        const res = await fetch(`${API_URL}/leaderboard`);
+        const leaders = await res.json();
         
-        voteList.innerHTML = '';
+        leaderboardList.innerHTML = '';
         
-        if (!args || args.length === 0) {
-            voteList.innerHTML = '<p style="text-align:center; padding:40px; opacity:0.7;">No arguments to vote on yet. Check back soon!</p>';
+        if (!leaders || leaders.length === 0) {
+            leaderboardList.innerHTML = '<p style="text-align:center; padding:40px; opacity:0.5;">No champions yet. Be the first!</p>';
             return;
         }
         
-        args.forEach(arg => {
+        leaders.forEach((leader, index) => {
+            const rank = index + 1;
             const item = document.createElement('div');
-            item.className = 'vote-item';
-            item.style.animation = 'slideIn 0.3s ease';
+            item.className = 'leaderboard-item';
+            if (rank === 1) item.classList.add('top-1');
+            if (rank === 2) item.classList.add('top-2');
+            if (rank === 3) item.classList.add('top-3');
+            
+            const rankIcon = rank === 1 ? '👑' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
+            
             item.innerHTML = `
-                <p><strong>${arg.side === 'for' ? '✅ For' : '❌ Against'}</strong></p>
-                <p>${arg.text}</p>
-                <button onclick="vote(${arg.id})">Upvote 👍</button>
+                <div class="leaderboard-rank ${rank <= 3 ? `top-${rank}` : ''}">${rankIcon}</div>
+                <div class="leaderboard-info">
+                    <div class="leaderboard-username">${leader.username}</div>
+                    <div class="leaderboard-stats">${leader.wins}W / ${leader.losses}L ${leader.streak > 0 ? `🔥 ${leader.streak}` : ''}</div>
+                </div>
+                <div class="leaderboard-xp">${leader.xp}</div>
             `;
-            voteList.appendChild(item);
+            leaderboardList.appendChild(item);
         });
     } catch (err) {
         console.error('Error:', err);
-        voteList.innerHTML = '<p style="text-align:center; padding:40px; opacity:0.7;">No arguments available yet!</p>';
-    }
-}
-
-async function vote(argumentId) {
-    try {
-        await fetch(`${API_URL}/votes`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${sessionToken}`
-            },
-            body: JSON.stringify({
-                argument_id: argumentId,
-                user_id: currentUser.id
-            })
-        });
-        
-        currentUser.xp += 2;
-        updateStats();
-        showSuccess('Vote Recorded! 👍', '+2 XP earned');
-        setTimeout(() => loadVoteArguments(), 1500);
-    } catch (err) {
-        console.error('Error:', err);
-        currentUser.xp += 2;
-        updateStats();
-        showSuccess('Vote Recorded! 👍', '+2 XP earned');
-        setTimeout(() => loadVoteArguments(), 1500);
+        leaderboardList.innerHTML = '<p style="text-align:center; padding:40px; opacity:0.5;">Failed to load leaderboard</p>';
     }
 }
 
 function updateStats() {
     currentUser.level = Math.floor(currentUser.xp / 100) + 1;
-    levelDisplay.textContent = `Level ${currentUser.level}`;
-    xpDisplay.textContent = `${currentUser.xp} XP`;
+    levelDisplay.textContent = `LVL ${currentUser.level}`;
+    xpDisplay.textContent = currentUser.xp;
+    
+    if (currentUser.streak > 0) {
+        streakDisplay.style.display = 'block';
+        streakValue.textContent = currentUser.streak;
+    } else {
+        streakDisplay.style.display = 'none';
+    }
 }
 
 function updateProfile() {
-    profileUsername.textContent = currentUser.username;
-    document.getElementById('profile-level').textContent = `Level ${currentUser.level}`;
-    document.getElementById('profile-xp').textContent = currentUser.xp;
-    document.getElementById('profile-debates').textContent = Math.floor(currentUser.xp / 5);
-    document.getElementById('profile-wins').textContent = 0;
-    document.getElementById('profile-votes').textContent = Math.floor(currentUser.xp / 2);
+    profileUsername.textContent = currentUser.username.toUpperCase();
+    profileLevel.textContent = `LEVEL ${currentUser.level}`;
+    profileXp.textContent = currentUser.xp;
+    profileWins.textContent = currentUser.wins;
+    profileLosses.textContent = currentUser.losses;
+    
+    const total = currentUser.wins + currentUser.losses;
+    const winrate = total > 0 ? Math.round((currentUser.wins / total) * 100) : 0;
+    profileWinrate.textContent = `${winrate}%`;
+    
+    if (currentUser.streak > 0) {
+        profileStreak.style.display = 'inline-block';
+        profileStreak.textContent = `🔥 ${currentUser.streak} STREAK`;
+    } else {
+        profileStreak.style.display = 'none';
+    }
 }
 
-function showSuccess(title, message) {
-    successTitle.textContent = title;
-    successMessage.textContent = message;
-    successModal.classList.remove('hidden');
+async function updateLiveStats() {
+    try {
+        const res = await fetch(`${API_URL}/stats`);
+        const stats = await res.json();
+        
+        liveCount.textContent = stats.live_battles || 0;
+        record.textContent = `${currentUser.wins}/${currentUser.losses}`;
+    } catch (err) {
+        console.error('Error:', err);
+        liveCount.textContent = '0';
+        record.textContent = `${currentUser.wins}/${currentUser.losses}`;
+    }
 }
 
-window.vote = vote;
+function showWinner(title, message) {
+    winnerTitle.textContent = title;
+    winnerMessage.textContent = message;
+    winnerModal.classList.remove('hidden');
+}

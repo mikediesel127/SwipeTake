@@ -3,168 +3,199 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SwipeTake - Argue. Win. Level Up.</title>
+    <title>SwipeTake - Battle Arena</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="auth-screen" class="auth-screen">
         <div class="auth-container">
-            <h1>🔥 SwipeTake</h1>
-            <p class="auth-subtitle">Argue. Win. Level Up.</p>
+            <div class="logo">⚔️</div>
+            <h1>SWIPETAKE</h1>
+            <p class="auth-subtitle">ENTER THE ARENA</p>
             
             <div class="auth-form">
-                <input type="text" id="username-input" placeholder="Enter a username" maxlength="20">
-                <button class="btn-primary btn-large" id="btn-login">Start Arguing 🚀</button>
+                <input type="text" id="username-input" placeholder="ENTER USERNAME" maxlength="20">
+                <button class="btn-primary" id="btn-login">FIGHT 🔥</button>
             </div>
             
-            <p class="auth-note">Your username will be saved for future sessions</p>
+            <p class="auth-note">Join the battle. Prove your point. Dominate the leaderboard.</p>
         </div>
     </div>
 
     <div id="app" class="hidden">
         <header>
             <div class="header-left">
-                <h1>🔥 SwipeTake</h1>
+                <h1>⚔️ SWIPETAKE</h1>
             </div>
-            <div class="stats">
-                <span id="username-display" class="username-chip"></span>
-                <span id="level">Level 1</span>
-                <span id="xp">0 XP</span>
+            <div class="user-stats">
+                <div class="username-display" id="username-display"></div>
+                <div class="xp-display">
+                    <span id="xp">0</span> XP
+                    <span class="level-badge" id="level">LVL 1</span>
+                </div>
+                <div class="streak-display" id="streak-display" style="display: none;">
+                    🔥 <span id="streak">0</span>
+                </div>
             </div>
         </header>
 
         <div id="feed-view" class="view active">
+            <div class="battle-status">
+                <div class="status-item">
+                    <span class="status-label">LIVE BATTLES</span>
+                    <span class="status-value" id="live-count">0</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">YOUR W/L</span>
+                    <span class="status-value" id="record">0/0</span>
+                </div>
+            </div>
+
             <div class="feed">
-                <div class="card" id="debate-card">
-                    <div class="prompt-container">
-                        <span class="vibe-tag" id="vibe-tag">#Fun</span>
-                        <h2 id="prompt-text">Loading debates...</h2>
-                        <p class="slots" id="slots">0/10 responses</p>
+                <div class="battle-card" id="battle-card">
+                    <div class="card-header">
+                        <span class="vibe-tag" id="vibe-tag">#DEEP</span>
+                        <div class="timer-display" id="timer-display">
+                            ⏱️ <span id="battle-timer">10:00</span>
+                        </div>
+                    </div>
+                    
+                    <h2 class="battle-prompt" id="prompt-text">Loading battles...</h2>
+                    
+                    <div class="battle-meta">
+                        <span class="response-count" id="slots">0/10 FIGHTERS</span>
+                        <span class="battle-status" id="battle-status">LIVE</span>
                     </div>
                     
                     <div class="actions">
-                        <button class="btn-primary" id="btn-argue">Argue This 🗣️</button>
-                        <button class="btn-secondary" id="btn-skip">Skip →</button>
+                        <button class="btn-for" id="btn-argue-for">FOR ✓</button>
+                        <button class="btn-against" id="btn-argue-against">AGAINST ✗</button>
                     </div>
+                    
+                    <button class="btn-skip" id="btn-skip">SKIP →</button>
                 </div>
             </div>
         </div>
 
         <div id="create-view" class="view">
             <div class="create-container">
-                <h2>Create a Debate</h2>
-                <p class="subtitle">Spark a discussion and watch the takes roll in</p>
+                <h2>START A BATTLE</h2>
+                <p class="subtitle">Post your take. Let the arena decide.</p>
                 
                 <div class="form-group">
-                    <label>Your Statement</label>
-                    <textarea id="create-prompt" placeholder="e.g., Pineapple on pizza is a crime" maxlength="200"></textarea>
+                    <label>YOUR STATEMENT</label>
+                    <textarea id="create-prompt" placeholder="Make it bold. Make it controversial." maxlength="200"></textarea>
                     <div class="char-count"><span id="prompt-char-count">0</span>/200</div>
                 </div>
 
-                <div class="form-group">
-                    <label>Vibe</label>
-                    <select id="create-vibe">
-                        <option value="Fun">🎉 Fun</option>
-                        <option value="Deep">🧠 Deep</option>
-                        <option value="Spicy">🌶️ Spicy</option>
-                        <option value="Change My View">💭 Change My View</option>
-                    </select>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>VIBE</label>
+                        <select id="create-vibe">
+                            <option value="Fun">🎉 FUN</option>
+                            <option value="Deep">🧠 DEEP</option>
+                            <option value="Spicy">🌶️ SPICY</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>MAX FIGHTERS</label>
+                        <select id="create-max">
+                            <option value="5">5</option>
+                            <option value="10" selected>10</option>
+                            <option value="20">20</option>
+                        </select>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Max Responses</label>
-                    <select id="create-max">
-                        <option value="5">5 responses</option>
-                        <option value="10" selected>10 responses</option>
-                        <option value="20">20 responses</option>
-                    </select>
-                </div>
-
-                <button class="btn-primary btn-large" id="btn-create-debate">Post Debate 🚀</button>
+                <button class="btn-primary btn-large" id="btn-create-debate">LAUNCH BATTLE ⚔️</button>
             </div>
         </div>
 
-        <div id="vote-view" class="view">
-            <div class="vote-container">
-                <h2>Vote on Arguments</h2>
-                <p class="subtitle">Swipe through and crown the best takes</p>
-                <div id="vote-list"></div>
+        <div id="leaderboard-view" class="view">
+            <div class="leaderboard-container">
+                <h2>TODAY'S CHAMPIONS</h2>
+                <p class="subtitle">Resets every 24 hours. Fight for #1.</p>
+                
+                <div id="leaderboard-list" class="leaderboard-list"></div>
             </div>
         </div>
 
         <div id="profile-view" class="view">
             <div class="profile-container">
                 <div class="profile-header">
-                    <div class="avatar">🎯</div>
-                    <h2 id="profile-username">Debater</h2>
-                    <p class="level-badge" id="profile-level">Level 1</p>
+                    <div class="avatar">⚔️</div>
+                    <h2 id="profile-username">WARRIOR</h2>
+                    <div class="profile-stats-inline">
+                        <span class="level-badge-large" id="profile-level">LEVEL 1</span>
+                        <span class="streak-badge-large" id="profile-streak" style="display: none;">🔥 0 STREAK</span>
+                    </div>
                 </div>
                 
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-value" id="profile-xp">0</div>
-                        <div class="stat-label">Total XP</div>
+                        <div class="stat-label">XP</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="profile-debates">0</div>
-                        <div class="stat-label">Debates</div>
-                    </div>
-                    <div class="stat-card">
+                    <div class="stat-card win-card">
                         <div class="stat-value" id="profile-wins">0</div>
-                        <div class="stat-label">Wins</div>
+                        <div class="stat-label">WINS</div>
+                    </div>
+                    <div class="stat-card loss-card">
+                        <div class="stat-value" id="profile-losses">0</div>
+                        <div class="stat-label">LOSSES</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value" id="profile-votes">0</div>
-                        <div class="stat-label">Votes Cast</div>
+                        <div class="stat-value" id="profile-winrate">0%</div>
+                        <div class="stat-label">WIN RATE</div>
                     </div>
                 </div>
 
                 <div class="badges-section">
-                    <h3>Badges</h3>
+                    <h3>ACHIEVEMENTS</h3>
                     <div class="badges-grid">
-                        <div class="badge">🔥 First Debate</div>
-                        <div class="badge locked">🏆 10 Wins</div>
-                        <div class="badge locked">⚡ Speed Demon</div>
-                        <div class="badge locked">🎯 Sharp Shooter</div>
+                        <div class="badge">🔥 FIRST BLOOD</div>
+                        <div class="badge locked">⚔️ 10 WINS</div>
+                        <div class="badge locked">👑 CHAMPION</div>
+                        <div class="badge locked">💀 UNTOUCHABLE</div>
                     </div>
                 </div>
 
-                <button class="btn-secondary btn-large" id="btn-logout" style="margin-top: 24px;">Logout</button>
+                <button class="btn-secondary btn-large" id="btn-logout">LOGOUT</button>
             </div>
         </div>
 
         <div id="argue-modal" class="modal hidden">
             <div class="modal-content">
-                <h3>Make Your Case</h3>
-                <p id="modal-prompt"></p>
-                <select id="side-select">
-                    <option value="for">✅ For</option>
-                    <option value="against">❌ Against</option>
-                </select>
-                <textarea id="argument-input" placeholder="Your argument (max 200 chars)..." maxlength="200"></textarea>
-                <div class="char-count"><span id="arg-char-count">0</span>/200</div>
-                <div class="timer" id="timer">30s</div>
-                <div class="modal-actions">
-                    <button class="btn-primary" id="btn-submit">Submit 🚀</button>
-                    <button class="btn-secondary" id="btn-cancel">Cancel</button>
+                <div class="modal-header">
+                    <h3 id="modal-side">FIGHTING FOR</h3>
+                    <button class="btn-close" id="btn-close-argue">✕</button>
                 </div>
+                <p id="modal-prompt" class="modal-prompt"></p>
+                <textarea id="argument-input" placeholder="Drop your best argument..." maxlength="200"></textarea>
+                <div class="char-count"><span id="arg-char-count">0</span>/200</div>
+                <div class="timer-bar" id="timer-bar">
+                    <div class="timer-fill" id="timer-fill"></div>
+                    <span class="timer-text" id="timer-text">30s</span>
+                </div>
+                <button class="btn-primary btn-large" id="btn-submit">SUBMIT ⚔️</button>
             </div>
         </div>
 
-        <div id="success-modal" class="modal hidden">
-            <div class="modal-content success-content">
-                <div class="success-icon">🎉</div>
-                <h3 id="success-title">Argument Posted!</h3>
-                <p id="success-message">+5 XP earned</p>
-                <button class="btn-primary" id="btn-close-success">Continue</button>
+        <div id="winner-modal" class="modal hidden">
+            <div class="modal-content winner-content">
+                <div class="winner-icon">👑</div>
+                <h3 id="winner-title">VICTORY!</h3>
+                <p id="winner-message">+50 XP</p>
+                <button class="btn-primary" id="btn-close-winner">CONTINUE</button>
             </div>
         </div>
 
         <nav>
-            <button class="nav-btn active" data-view="feed">🔥 Feed</button>
-            <button class="nav-btn" data-view="create">➕ Create</button>
-            <button class="nav-btn" data-view="vote">👍 Vote</button>
-            <button class="nav-btn" data-view="profile">👤 Profile</button>
+            <button class="nav-btn active" data-view="feed">⚔️ BATTLES</button>
+            <button class="nav-btn" data-view="create">➕ START</button>
+            <button class="nav-btn" data-view="leaderboard">🏆 TOP 10</button>
+            <button class="nav-btn" data-view="profile">👤 STATS</button>
         </nav>
     </div>
 
